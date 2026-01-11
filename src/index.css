@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 定义一个飞入动画 */
+@keyframes fly-into-bag {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--target-x), var(--target-y)) scale(0.1);
+  }
+}
+
+.animate-fly {
+  animation: fly-into-bag 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 70;
+  pointer-events: none;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #FFF0F5 0%, #FFFDE7 100%);
+  color: #5D4037;
+  min-height: 100vh;
+  font-family: "ZCOOL KuaiLe", cursive, sans-serif;
+}
+
+/* 使用常规 CSS 替代 @apply */
+.btn-candy {
+  transform: transition-all duration-200;
+  border-radius: 2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-candy:hover {
+  transform: scale(1.05);
+}
+
+.btn-candy:active {
+  transform: scale(0.95) translateY(1px);
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 🆕 新增：呼吸动画 (变大变小) */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08); /* 放大到 1.08 倍 */
+  }
+}
+
+.animate-breathe {
+  animation: breathe 2s infinite ease-in-out;
+}
+
+
+/* 答错时的晃动动画 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
