@@ -1,18 +1,18 @@
-// 移除未使用的 React 引用，或者保留但忽略
-import { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 
-// 给 props 加上 : any
-const StoryReader = ({ story, onBack, onExit }: any) => {
+const StoryReader = ({ story, onBack, onExit }) => {
   const [readIds, setReadIds] = useState(new Set());
   const [pageIndex, setPageIndex] = useState(0);
   
-  // 修复：使用 any 解决 null 和 number 类型冲突
-  const playTimer = useRef<any>(null);
+  // 用于存储播放定时器
+  const playTimer = useRef(null);
 
+  // --- 🖋️ 样式 ---
   const kaitiStyle = {
     fontFamily: '"KaiTi", "STKaiti", "楷体", "SimSun", "宋体", serif'
   };
 
+  // --- 🛡️ 数据兜底 ---
   const validStory = story && story.pages ? story : {
     title: "未找到故事",
     pages: [{ image: "", text: "暂无内容" }]
@@ -22,13 +22,14 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
   const totalPages = validStory.pages.length;
   const isLastPage = pageIndex === totalPages - 1;
 
-  // 修复：reduce 参数加 any
+  // --- 🔢 计算进度 ---
   const totalChars = useMemo(() => {
-    return validStory.pages.reduce((acc: any, page: any) => acc + page.text.length, 0);
+    return validStory.pages.reduce((acc, page) => acc + page.text.length, 0);
   }, [validStory]);
 
   const progress = totalChars > 0 ? Math.round((readIds.size / totalChars) * 100) : 0;
 
+  // --- 🔄 生命周期 ---
   useEffect(() => {
     return () => {
       window.speechSynthesis.cancel();
@@ -36,7 +37,8 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
     };
   }, []);
 
-  const speak = (text: any) => {
+  // --- 🔊 语音播放 ---
+  const speak = (text) => {
     if (['，', '。', '！', '？', '“', '”', '：', ' '].includes(text)) return;
     
     window.speechSynthesis.cancel();
@@ -49,13 +51,13 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
       u.lang = 'zh-CN';
       u.rate = 1.0; 
       
-      // 修复：window 强转 any
-      (window as any).currentUtterance = u; 
+      window.currentUtterance = u; 
       window.speechSynthesis.speak(u);
     }, 50);
   };
 
-  const handleCharClick = (char: any, cIndex: any) => {
+  // --- 👆 点击汉字 ---
+  const handleCharClick = (char, cIndex) => {
     speak(char);
 
     const uniqueId = `${pageIndex}-${cIndex}`;
@@ -66,12 +68,13 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
     });
   };
 
-  const handlePrev = (e: any) => {
+  // --- 📄 翻页逻辑 ---
+  const handlePrev = (e) => {
     e.stopPropagation(); 
     if (pageIndex > 0) setPageIndex(pageIndex - 1);
   };
 
-  const handleNext = (e: any) => {
+  const handleNext = (e) => {
     e.stopPropagation();
     if (pageIndex < totalPages - 1) {
       setPageIndex(pageIndex + 1);
@@ -83,6 +86,7 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
   return (
     <div className="min-h-screen w-full bg-[#FFF5F7] flex flex-col items-center py-6 px-4">
       
+      {/* 顶部导航 */}
       <div className="w-full max-w-4xl flex justify-between items-center mb-6">
         <button 
           onClick={onExit}
@@ -100,26 +104,30 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
         </div>
       </div>
 
+      {/* 📚 书本主体 */}
       <div className="w-full max-w-3xl flex-1 flex flex-col mb-4">
         
+        {/* 卡片容器 */}
         <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border-8 border-white flex flex-col flex-1 relative animate-[fadeIn_0.3s_ease-out]">
             
+            {/* 1. 图片区 */}
             <div className="w-full h-1/2 bg-gray-100 relative group">
               <img 
                 src={currentPage.image} 
                 alt={`第${pageIndex + 1}页`}
                 className="w-full h-full object-cover"
-                // 修复：e 强转 any 以解决 e.target.onerror 报错
-                onError={(e: any) => {
+                onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = `https://placehold.co/800x600/ffe4e6/ec4899?text=绘本插图-${pageIndex + 1}&font=serif`;
                 }}
               />
               
+              {/* 页码 */}
               <div className="absolute top-4 left-4 bg-white/90 px-3 py-1 rounded-lg text-pink-500 font-bold shadow-sm z-10" style={kaitiStyle}>
                  第 {pageIndex + 1} / {totalPages} 页
               </div>
 
+              {/* ⬅️ 左箭头 */}
               {pageIndex > 0 && (
                 <button 
                   onClick={handlePrev}
@@ -131,6 +139,7 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
                 </button>
               )}
 
+              {/* ➡️ 右箭头 */}
               <button 
                 onClick={handleNext}
                 className={`
@@ -151,10 +160,11 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
 
             </div>
 
+            {/* 2. 文字区 */}
             <div className="w-full h-1/2 bg-[#FFFDF5] p-6 md:p-10 flex flex-col items-center justify-center">
               
               <div className="flex flex-wrap justify-center gap-4 content-center">
-                {currentPage.text.split('').map((char: any, cIndex: any) => {
+                {currentPage.text.split('').map((char, cIndex) => {
                   const uniqueId = `${pageIndex}-${cIndex}`;
                   const isRead = readIds.has(uniqueId);
                   
@@ -180,6 +190,8 @@ const StoryReader = ({ story, onBack, onExit }: any) => {
               </div>
 
             </div>
+            
+            {/* 🔥 删除了这里的阴影线 div */}
             
         </div>
 

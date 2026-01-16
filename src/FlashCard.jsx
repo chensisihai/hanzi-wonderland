@@ -1,32 +1,33 @@
 import React, { useState, useRef } from 'react';
 
-// 给 props 加上 : any
-const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, showMic = false, onOpenWriter }: any) => {
+// 🔥 新增 prop: showMic (是否显示麦克风)
+const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, showMic = false, onOpenWriter }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isListening, setIsListening] = useState(false); 
-  const [activeCharId, setActiveCharId] = useState<string | null>(null);
+  const [activeCharId, setActiveCharId] = useState(null);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef(null);
 
   const kaitiStyle = {
     fontFamily: '"KaiTi", "STKaiti", "楷体", "SimSun", "宋体", serif'
   };
 
-  const speak = (text: string) => {
+  const speak = (text) => {
     if (isListening) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'zh-CN';
     u.rate = 1.0; 
-    (window as any).currentUtterance = u; 
+    window.currentUtterance = u; 
     window.speechSynthesis.speak(u);
   };
 
   // --- 🎙️ 语音识别 ---
-  const startListening = (e: any) => {
+  const startListening = (e) => {
     e.stopPropagation();
     
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    // 检查浏览器支持
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("请使用 Chrome 浏览器体验语音功能哦");
       return;
@@ -41,7 +42,7 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
       recognition.onstart = () => setIsListening(true);
       recognition.onend = () => setIsListening(false);
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         if (transcript.includes(data.char)) {
           handleCorrectPronunciation();
@@ -63,19 +64,19 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
   const handleCorrectPronunciation = () => {
     speak("读对啦！真棒！");
     setTimeout(() => {
-      setIsFlipped(true); 
+      setIsFlipped(true); // 读对自动翻面奖励
     }, 500);
   };
 
   // --- 交互 ---
-  const handleFlip = (e: any) => {
+  const handleFlip = (e) => {
     if (onClick) { onClick(); return; }
     if (isListening) return; 
     if (!isFlipped) speak(data.char);
     setIsFlipped(!isFlipped);
   };
 
-  const handleCharClick = (e: any, char: string, id: string) => {
+  const handleCharClick = (e, char, id) => {
     e.stopPropagation(); 
     e.preventDefault();
     setActiveCharId(id);
@@ -83,9 +84,9 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
     setTimeout(() => setActiveCharId(null), 2000); 
   };
 
-  const stopPropagation = (e: any) => e.stopPropagation();
+  const stopPropagation = (e) => e.stopPropagation();
 
-  const handleLearnClick = (e: any) => {
+  const handleLearnClick = (e) => {
     e.stopPropagation();
     onToggleLearn();
     if (!isLearned) speak("太棒了！放入宝藏箱！");
@@ -107,9 +108,11 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
           <span className="text-3xl text-gray-400 mb-2 font-medium tracking-widest" style={kaitiStyle}>{data.pinyin}</span>
           <span className="text-9xl font-bold text-gray-800 drop-shadow-sm select-none" style={kaitiStyle}>{data.char}</span>
           
-          {/* 底部工具栏 */}
+          {/* 🔥 关键修改：只有 showMic 为 true 时才显示麦克风 */}
+          {/* 底部工具栏：麦克风 + 写字笔 */}
           {showMic && !onClick && (
             <div className="absolute bottom-8 flex gap-4">
+              {/* 麦克风 */}
               <button
                 onClick={startListening}
                 className={`
@@ -126,9 +129,12 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
                 )}
               </button>
 
+              {/* 🔥 新增：魔法写字笔 */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  // 这里的 onOpenWriter 需要从 props 里解构出来
+                  // 所以请确保组件开头是： const FlashCard = ({ ..., onOpenWriter }) => {
                   if (onOpenWriter) onOpenWriter(data);
                 }}
                 className="w-14 h-14 bg-white text-indigo-500 rounded-full border-2 border-indigo-100 flex items-center justify-center shadow-md hover:bg-indigo-50 hover:scale-110 transition-all"
@@ -142,19 +148,17 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
           {feedbackType === 'wrong' && <div className="absolute inset-0 flex items-center justify-center bg-red-100/80 rounded-2xl"><span className="text-8xl">❌</span></div>}
         </div>
 
-        {/* 背面 */}
+        {/* 背面 (保持不变) */}
         <div className="absolute inset-0 flex flex-col rounded-3xl border-[6px] border-white bg-white shadow-xl overflow-hidden [transform:rotateY(180deg)] [backface-visibility:hidden] z-10">
            <div onClick={handleFlip} className="h-[45%] w-full relative bg-gray-100 cursor-pointer">
-              <img src={data.image} alt={data.char} className="object-cover w-full h-full pointer-events-none" onError={(e: any) => {e.target.onerror = null; e.target.src = `https://placehold.co/400x300/e2e8f0/1e293b?text=${encodeURIComponent(data.char)}&font=serif`;}}/>
+              <img src={data.image} alt={data.char} className="object-cover w-full h-full pointer-events-none" onError={(e) => {e.target.onerror = null; e.target.src = `https://placehold.co/400x300/e2e8f0/1e293b?text=${encodeURIComponent(data.char)}&font=serif`;}}/>
               <div className="absolute bottom-2 left-3 text-white pointer-events-none"><span className="text-6xl font-bold mr-2 drop-shadow-md" style={kaitiStyle}>{data.char}</span></div>
            </div>
            <div className="flex-1 flex flex-col justify-between px-2 py-3 bg-[#FFF5F7] cursor-default" onClick={stopPropagation}> 
               <div className="flex-1 flex flex-col gap-2 items-center justify-center overflow-y-auto">
-                {/* 修复：这里给参数加上了 : any */}
-                {data.words.map((word: any, wIndex: any) => (
+                {data.words.map((word, wIndex) => (
                   <div key={wIndex} className="flex items-center bg-white rounded-xl px-2 py-1 shadow-sm border border-pink-100 shrink-0">
-                    {/* 修复：这里给参数加上了 : any */}
-                    {word.split('').map((char: any, cIndex: any) => {
+                    {word.split('').map((char, cIndex) => {
                       const uniqueId = `${data.id}-${wIndex}-${cIndex}`;
                       const isActive = activeCharId === uniqueId;
                       return <div key={cIndex} onClick={(e) => handleCharClick(e, char, uniqueId)} className={`mx-1 px-2 py-1 rounded-lg text-2xl cursor-pointer select-none transition-all duration-200 ${isActive ? 'bg-pink-500 text-white scale-110 shadow-md' : 'text-gray-700 hover:text-pink-500 hover:bg-pink-50'}`} style={kaitiStyle}>{char}</div>;
