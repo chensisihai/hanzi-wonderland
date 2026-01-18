@@ -1,32 +1,53 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
-// 🔥 新增 prop: showMic (是否显示麦克风)
 const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, showMic = false, onOpenWriter }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isListening, setIsListening] = useState(false); 
   const [activeCharId, setActiveCharId] = useState(null);
 
   const recognitionRef = useRef(null);
+  // 🔥 新增：用于控制发声延时的计时器
+  const speechTimer = useRef(null);
 
   const kaitiStyle = {
     fontFamily: '"KaiTi", "STKaiti", "楷体", "SimSun", "宋体", serif'
   };
 
+  // 🔥 新增：组件卸载时清理声音和定时器
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+      if (speechTimer.current) clearTimeout(speechTimer.current);
+    };
+  }, []);
+
+  // 🔥 修复后的发声函数：解决吞音问题
   const speak = (text) => {
     if (isListening) return;
+    
+    // 1. 先立即停止上一个声音
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'zh-CN';
-    u.rate = 1.0; 
-    window.currentUtterance = u; 
-    window.speechSynthesis.speak(u);
+    
+    // 2. 清除之前的定时器，防止冲突
+    if (speechTimer.current) {
+      clearTimeout(speechTimer.current);
+    }
+
+    // 3. 延迟 50ms 再播放，给浏览器一点缓冲时间
+    speechTimer.current = setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 1.0; 
+      // 挂载到 window 防止被垃圾回收 (Chrome Bug)
+      window.currentUtterance = u; 
+      window.speechSynthesis.speak(u);
+    }, 50);
   };
 
   // --- 🎙️ 语音识别 ---
   const startListening = (e) => {
     e.stopPropagation();
     
-    // 检查浏览器支持
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("请使用 Chrome 浏览器体验语音功能哦");
@@ -44,6 +65,7 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
 
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
+        // 模糊匹配，只要包含这个字就算对
         if (transcript.includes(data.char)) {
           handleCorrectPronunciation();
         } else {
@@ -64,7 +86,7 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
   const handleCorrectPronunciation = () => {
     speak("读对啦！真棒！");
     setTimeout(() => {
-      setIsFlipped(true); // 读对自动翻面奖励
+      setIsFlipped(true); 
     }, 500);
   };
 
@@ -72,7 +94,10 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
   const handleFlip = (e) => {
     if (onClick) { onClick(); return; }
     if (isListening) return; 
+    
+    // 翻面时不读字，或者你可以选择读
     if (!isFlipped) speak(data.char);
+    
     setIsFlipped(!isFlipped);
   };
 
@@ -108,11 +133,9 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
           <span className="text-3xl text-gray-400 mb-2 font-medium tracking-widest" style={kaitiStyle}>{data.pinyin}</span>
           <span className="text-9xl font-bold text-gray-800 drop-shadow-sm select-none" style={kaitiStyle}>{data.char}</span>
           
-          {/* 🔥 关键修改：只有 showMic 为 true 时才显示麦克风 */}
-          {/* 底部工具栏：麦克风 + 写字笔 */}
+          {/* 底部工具栏 */}
           {showMic && !onClick && (
             <div className="absolute bottom-8 flex gap-4">
-              {/* 麦克风 */}
               <button
                 onClick={startListening}
                 className={`
@@ -129,12 +152,9 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
                 )}
               </button>
 
-              {/* 🔥 新增：魔法写字笔 */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  // 这里的 onOpenWriter 需要从 props 里解构出来
-                  // 所以请确保组件开头是： const FlashCard = ({ ..., onOpenWriter }) => {
                   if (onOpenWriter) onOpenWriter(data);
                 }}
                 className="w-14 h-14 bg-white text-indigo-500 rounded-full border-2 border-indigo-100 flex items-center justify-center shadow-md hover:bg-indigo-50 hover:scale-110 transition-all"
@@ -148,7 +168,7 @@ const FlashCard = ({ data, isLearned, onToggleLearn, onClick, feedbackType, show
           {feedbackType === 'wrong' && <div className="absolute inset-0 flex items-center justify-center bg-red-100/80 rounded-2xl"><span className="text-8xl">❌</span></div>}
         </div>
 
-        {/* 背面 (保持不变) */}
+        {/* 背面 */}
         <div className="absolute inset-0 flex flex-col rounded-3xl border-[6px] border-white bg-white shadow-xl overflow-hidden [transform:rotateY(180deg)] [backface-visibility:hidden] z-10">
            <div onClick={handleFlip} className="h-[45%] w-full relative bg-gray-100 cursor-pointer">
               <img src={data.image} alt={data.char} className="object-cover w-full h-full pointer-events-none" onError={(e) => {e.target.onerror = null; e.target.src = `https://placehold.co/400x300/e2e8f0/1e293b?text=${encodeURIComponent(data.char)}&font=serif`;}}/>
