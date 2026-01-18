@@ -347,6 +347,8 @@ function App() {
 
   // 5. 学习模式
   const isGame = stage === 'game';
+  // 计算总题数 = 当前关卡的汉字数量
+  const totalQuestions = currentLevel ? currentLevel.characters.length : 0;
   const displayCards = isGame ? gameCards : currentLevel.characters;
   const currentQuestionIndex = totalQuestions - gameQueue.length;
 
